@@ -1,4 +1,4 @@
-# HCL-Tech-DataScience — RAG Backend
+# HCL-Tech-genai — RAG assistant
 
 This repository contains a Retrieval-Augmented Generation (RAG) backend used to ingest PDFs, chunk and extract text, tables and images, summarize content with LLMs, and build a retriever for downstream QA or assistants.
 
