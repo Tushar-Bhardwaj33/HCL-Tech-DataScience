@@ -1,3 +1,5 @@
+# Requirements for backend environment
+# (cleaned: use # for comments and one package per line)
 base64io
 deep_translator
 deepgram-sdk
@@ -6,7 +8,6 @@ groq
 hf_xet
 langchain
 langchain-chroma
-langchain-cohere
 langchain-core
 langchain-groq
 langchain-huggingface

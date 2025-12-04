@@ -1,5 +1,5 @@
-from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 from datetime import datetime, timezone
+from langchain_core.messages import HumanMessage, SystemMessage, AIMessage
 
 class ConversationSession:
     def __init__(self, agent_executor, thread_id="default", system_prompt=None, max_history=10):
@@ -39,9 +39,18 @@ class ConversationSession:
                 config,
                 stream_mode="values"
             ):
-                chunk = step["messages"][-1].content
-                print(chunk, end="", flush=True)
-                full_response.append(chunk)
+                # step may be dict with 'messages', a list, or a message-like object
+                if isinstance(step, dict) and "messages" in step:
+                    msg = step["messages"][-1]
+                else:
+                    try:
+                        msg = step[-1]
+                    except Exception:
+                        msg = step
+
+                chunk = getattr(msg, "content", str(msg))
+                print(str(chunk), end="", flush=True)
+                full_response.append(str(chunk))
 
             self.append_ai_message("".join(full_response))
             self.truncate_history()
@@ -53,7 +62,21 @@ class ConversationSession:
 
 # Example usage
 def main():
-    from Backend.app.agent.my_agent_initializer import TwentyONE
+    TwentyONE = None
+    # try relative import first (when run as package), then absolute
+    try:
+        from .my_agent_initializer import TwentyONE as _T
+        TwentyONE = _T
+    except Exception:
+        try:
+            from backend.agent.my_agent_initializer import TwentyONE as _T2
+            TwentyONE = _T2
+        except Exception:
+            TwentyONE = None
+
+    if TwentyONE is None:
+        print("TwentyONE agent initializer not found. Skipping interactive example.")
+        return
 
     SYSTEM_PROMPT = """
 You are a RAG (Retrieval-Augmented Generation) assistant.
@@ -67,7 +90,10 @@ Guidelines:
 5. If sources are present, mention them at the end (e.g., [Source: filename]).
 """
 
-    session = ConversationSession(TwentyONE, thread_id="aaff", system_prompt=SYSTEM_PROMPT)
+    # Instantiate agent executor if TwentyONE is a class/callable
+    agent_exec = TwentyONE() if callable(TwentyONE) else TwentyONE
+
+    session = ConversationSession(agent_exec, thread_id="aaff", system_prompt=SYSTEM_PROMPT)
 
     try:
         while True:
@@ -75,3 +101,7 @@ Guidelines:
             session.run(user_input)
     except KeyboardInterrupt:
         print("\nSession saved. Goodbye!")
+
+
+if __name__ == "__main__":
+    main()
