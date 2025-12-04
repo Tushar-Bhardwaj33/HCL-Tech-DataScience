@@ -1,57 +1,237 @@
-# HCL-Tech-genai — RAG assistant
+# HCL-Tech-genai – Document-aware RAG Assistant
 
-This repository contains a Retrieval-Augmented Generation (RAG) backend used to ingest PDFs, chunk and extract text, tables and images, summarize content with LLMs, and build a retriever for downstream QA or assistants.
+An end-to-end Retrieval-Augmented Generation (RAG) system that lets you:
 
-Contents
-- backend/: Backend application code (rag chunking, ingest, summarizer, loader, agent)
-- backend/data/: Place PDF files here for processing
-- tests/: Unit tests (pytest) that exercise core logic without requiring heavy vendor libraries
+- Upload PDFs and other documents
+- Extract and chunk text (and optionally tables/images)
+- Build a semantic retriever over those chunks
+- Chat with an LLM grounded in your own data via a web UI
 
-Quickstart
-1. Create a Python virtual environment
-   python -m venv .venv
-   source .venv/bin/activate  # Windows: .venv\Scripts\activate
+This repo contains both **backend** (Python / FastAPI + LangChain-style pipeline) and **frontend** (TypeScript / React) code.
 
-2. Install runtime requirements (adjust if you only need testing):
-   pip install -r backend/requirements.txt
+---
 
-   Notes:
-   - Large vendor libraries (unstructured, langchain, model provider SDKs) may be optional when running the test suite because the code uses lazy imports and fallbacks. Install them only when you need full functionality.
-   - If you only want basic PDF text extraction, install PyPDF2: pip install PyPDF2
+## ✨ Features
 
-3. Place a PDF file into backend/data/ (e.g. backend/data/example.pdf)
+- **RAG pipeline**: Ingests PDFs, chunks them, and builds a retriever for QA.
+- **Multi-provider LLM support** (designed to work with providers like Groq, NVIDIA, etc.).
+- **Lazy imports & light mode**: Can run core logic (and tests) without installing every heavy dependency.
+- **API-first backend**: FastAPI endpoints for ingestion, retrieval and chat.
+- **Modern frontend**: TypeScript SPA for uploading docs and chatting with the assistant.
+- **Environment-based configuration**: Plug in API keys via `.env`.
 
-4. Run the chunker script to extract chunks (uses unstructured if available, falls back to PyPDF2):
-   python backend/run_chunker.py
+---
 
-Running Tests
-- Install pytest if needed:
-  pip install pytest
-- Run tests from repository root:
-  pytest -q
+## 🗂️ Repository Structure
 
-What the tests cover
-- tests/test_summarizer.py: ensures SummarizerAndImageDescriber initializes correctly and can be imported without installing heavy LLM/model packages (tests inject small fake langchain modules).
-- tests/test_get.py: ensures chunk metadata extraction behaves as expected.
-- tests/test_conversations.py: ensures ConversationSession.run handles various stream shapes from an agent executor.
+```text
+HCL-Tech-genai/
+├─ backend/               # Python backend (FastAPI, RAG pipeline, PDF processing)
+│  ├─ app/                # API routes, services, models, utilities
+│  ├─ data/               # (Git-ignored) input PDFs and processed artifacts
+│  ├─ requirements.txt    # Python dependencies for backend
+│  └─ run_chunker.py      # Example script to chunk PDFs
+│
+├─ frontend/              # TypeScript/React client
+│  ├─ src/                # Components, pages, hooks, API client
+│  ├─ public/             # Static assets
+│  └─ package.json        # Frontend dependencies & scripts
+│
+└─ README.md              # Project documentation
+````
 
-Design notes and runtime behavior
-- Lazy imports: Modules that depend on large third-party libraries (langchain, unstructured, model SDKs) perform imports lazily and provide lightweight fallbacks so unit tests and minimal features run without those packages.
-- Summarizer fallback: If model SDKs are not installed or API keys are missing, summarizer methods will either raise (missing API keys) or use simple fallbacks so tests remain deterministic.
-- PDF processing: If unstructured.partition.pdf is present it'll be used. Otherwise PyPDF2 is used to extract per-page text and create minimal chunk objects.
+> Some folders/files are illustrative; adjust the tree if you add or rename modules.
 
-Environment variables
-- GROQ_API_KEY: API key for Groq (used by summarizer)
-- NVIDIA_API_KEY: API key for NVIDIA model provider
+---
 
-Common troubleshooting
-- "ModuleNotFoundError" for optional packages: install the package or run tests which use injected fakes.
-- If pip install -r backend/requirements.txt fails, install only the packages you need (e.g., PyPDF2 for basic PDF extraction).
+## ⚙️ Tech Stack
 
-Next steps / Recommendations
-- Convert other top-level imports to lazy imports if you plan to run unit tests without vendor packages.
-- Add CI configuration and pin versions in requirements.txt for reproducible installs.
-- Implement further test coverage for loader, ingest and agent components with mocks for external services.
+**Backend**
 
-License
-- Add your preferred license file to the repository root.
+* Python
+* FastAPI (REST API)
+* LangChain ecosystem (retriever, chains, tools)
+* PDF processing (e.g. `PyPDF2`, `pdf2image`, `unstructured`)
+* Vector embeddings & RAG orchestration
+
+**Frontend**
+
+* TypeScript
+* React (SPA)
+* HTTP client for talking to the FastAPI backend
+
+---
+
+## 🚀 Getting Started
+
+### 1. Clone the repo
+
+```bash
+git clone https://github.com/Tushar-Bhardwaj33/HCL-Tech-genai.git
+cd HCL-Tech-genai
+```
+
+---
+
+### 2. Backend Setup
+
+From the project root:
+
+```bash
+cd backend
+```
+
+#### Create and activate a virtual environment
+
+```bash
+python -m venv .venv
+
+# Linux / macOS
+source .venv/bin/activate
+
+# Windows (PowerShell)
+# .venv\Scripts\Activate.ps1
+```
+
+#### Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+If the full requirements fail (or you only need basic text extraction), you can start minimal and add more later, for example:
+
+```bash
+pip install PyPDF2
+```
+
+---
+
+### 3. Configure Environment Variables
+
+Create a `.env` file inside `backend/` (or configure env vars via your runtime):
+
+```bash
+# backend/.env
+
+GROQ_API_KEY=your_groq_key_here
+NVIDIA_API_KEY=your_nvidia_key_here
+# Add other keys or configuration variables as required
+```
+
+These keys are used by the summarizer / LLM integration when you enable full RAG behavior.
+
+---
+
+### 4. Run the PDF Chunker (Optional Smoke Test)
+
+Place at least one PDF into:
+
+```text
+backend/data/
+    example.pdf
+```
+
+Then run:
+
+```bash
+cd backend
+python run_chunker.py
+```
+
+This should:
+
+1. Read PDFs from `backend/data/`
+2. Extract content (using `unstructured` if available or falling back to `PyPDF2`)
+3. Produce chunks and basic metadata ready for indexing / retrieval
+
+---
+
+### 5. Start the Backend API
+
+Still inside `backend/`:
+
+```bash
+uvicorn app.main:app --reload
+```
+
+* The API will typically be served at:
+  `http://127.0.0.1:8000`
+* If you’ve defined a FastAPI docs route, you can visit:
+  `http://127.0.0.1:8000/docs`
+
+---
+
+### 6. Frontend Setup
+
+From the project root:
+
+```bash
+cd frontend
+```
+
+Install dependencies:
+
+```bash
+npm install
+# or
+yarn install
+# or
+pnpm install
+```
+
+Run the development server (command name may differ slightly depending on your setup):
+
+```bash
+npm run dev
+# or: yarn dev
+```
+
+The frontend will usually be available at:
+
+```text
+http://localhost:5173    # (or similar Vite/React dev port)
+```
+
+Make sure the frontend’s API base URL points to your backend (e.g. `http://127.0.0.1:8000`).
+
+---
+
+## 🧪 Testing (Backend)
+
+If you add a `tests/` folder (recommended), you can run tests with:
+
+```bash
+cd backend
+pip install pytest
+pytest -q
+```
+
+Design intent:
+
+* **Lazy imports**: modules that depend on heavy packages (LangChain, `unstructured`, vendor SDKs) only import them when needed.
+* This allows tests to run even if certain heavy libraries aren’t installed, as long as the test suite injects fakes or mocks.
+
+---
+
+## 🧱 High-Level Architecture
+
+```text
++-------------+        HTTP/JSON        +---------------------+       Vector search / RAG
+|  Frontend   |  <--------------------> |     FastAPI API     |  <----------------------+
+| (React/TS)  |        (REST)           |  (Python backend)   |                         |
++-------------+                         +---------------------+                         |
+          ^                                       |                                     |
+          |                                       v                                     |
+          |                               +---------------+       +--------------------+
+          |                               |  PDF Ingest   |       |  LLM + Embeddings |
+          |                               |  & Chunking   |       |  (Groq, NVIDIA)   |
+          |                               +---------------+       +--------------------+
+          |                                        |
+          |                                        v
+          |                               +-----------------+
+          +------------------------------ |  Vector Store   |
+                                          +-----------------+
+```
+
+---
